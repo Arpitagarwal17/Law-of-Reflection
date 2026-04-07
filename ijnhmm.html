@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Law of Reflection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #06060f;
+      --surface: rgba(13, 13, 28, 0.85);
+      --border: rgba(99, 102, 241, 0.25);
+      --accent: #6366f1;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --orange: #fb923c;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --green: #34d399;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    canvas {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      display: block;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100; text-align: center;
+      padding: env(safe-area-inset-top, 14px) 20px 14px;
+      background: linear-gradient(to bottom, rgba(6,6,15,0.97) 40%, transparent);
+      pointer-events: none;
+    }
+    #header h1 {
+      font-size: clamp(14px, 4vw, 18px);
+      font-weight: 700; letter-spacing: 0.1em;
+      color: var(--purple);
+      text-transform: uppercase;
+    }
+
+    /* ── Top Container (holds Info & Formula) ── */
+    #top-panels {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 14px) + 40px);
+      left: 0; right: 0;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      pointer-events: auto;
+    }
+
+    /* ── Formula Panel (Top Left) ── */
+    #formula-panel .title {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+      color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px;
+    }
+    #formula-panel .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; font-weight: 700; color: var(--purple);
+    }
+    /* Fixed precise HTML subscript alignment */
+    #formula-panel .val sub {
+      font-size: 11px;
+      position: relative;
+      top: 0.25em;
+      margin-left: 1px;
+    }
+
+    /* ── Info Panel (Top Right) ── */
+    #info-panel { min-width: 160px; }
+    #info-panel .title {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
+      color: var(--text-dim); text-transform: uppercase; margin-bottom: 12px;
+    }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 9px; font-size: 12px; gap: 16px;
+    }
+    .info-row:last-child { margin-bottom: 0; }
+    .info-row .lbl { color: var(--text-dim); }
+    .info-row .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 700; color: var(--blue);
+    }
+    .info-row .val.g { color: var(--green); }
+    .info-row .val.p { color: var(--purple); }
+    .divider { height: 1px; background: var(--border); margin: 10px 0; }
+
+    /* ── Controls (Bottom Island Dock) ── */
+    #controls {
+      position: fixed; 
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 20px 20px 0 0;
+      padding: 20px 24px calc(14px + env(safe-area-inset-bottom, 0px));
+      display: flex; flex-direction: column; gap: 16px;
+      width: 100%;
+      max-width: 600px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-group { flex: 1; display: flex; align-items: center; gap: 12px; }
+    .slider-group label {
+      font-size: 12px; font-weight: 500; color: var(--text-dim);
+      white-space: nowrap; min-width: 80px;
+    }
+    .slider-group .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 700; color: var(--purple);
+      min-width: 45px; text-align: right;
+    }
+    
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      flex: 1; height: 6px; border-radius: 4px;
+      background: rgba(99,102,241,0.2); outline: none; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent); border: 4px solid var(--bg);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(99,102,241,0.5);
+    }
+
+    .btn-row { display: flex; justify-content: center; margin-top: 4px; margin-bottom: 2px; }
+    .btn {
+      padding: 10px 36px; border-radius: 10px;
+      background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+      color: var(--text); font-family: 'Outfit', sans-serif;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn:active { transform: scale(0.96); background: rgba(99,102,241,0.3); }
+
+    /* ── Signature / Watermark ── */
+    #signature {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(100, 116, 139, 0.6);
+      letter-spacing: 0.05em;
+    }
+    #signature span {
+      color: rgba(167, 139, 250, 0.8);
+      font-weight: 700;
+    }
+
+    @media (max-width: 500px) {
+      #top-panels { flex-direction: column; gap: 10px; align-items: stretch; }
+      #info-panel { width: 100%; }
+      #formula-panel { text-align: center; }
+      .slider-group label { font-size: 11px; min-width: 70px; }
+      #controls { padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas"></canvas>
+
+  <div id="header"><h1>Law of Reflection</h1></div>
+
+  <div id="top-panels">
+    <div id="formula-panel" class="panel">
+      <div class="title">Formula</div>
+      <div class="val">θ<sub>i</sub> = θ<sub>r</sub></div>
+    </div>
+
+    <div id="info-panel" class="panel">
+      <div class="title">Measurements</div>
+      <div class="info-row">
+        <span class="lbl">Angle of Incidence</span>
+        <span class="val" id="val-inc">30°</span>
+      </div>
+      <div class="info-row">
+        <span class="lbl">Angle of Reflection</span>
+        <span class="val g" id="val-ref">30°</span>
+      </div>
+      <div class="divider"></div>
+      <div class="info-row">
+        <span class="lbl">Source Height</span>
+        <span class="val p" id="val-h">2.5 m</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div class="slider-row">
+      <div class="slider-group">
+        <label>Source Height</label>
+        <input type="range" id="slider-h" min="0.8" max="4" step="0.1" value="2.5" />
+        <span class="val" id="show-h">2.5 m</span>
+      </div>
+    </div>
+    <div class="slider-row">
+      <div class="slider-group">
+        <label>Angle</label>
+        <input type="range" id="slider-a" min="10" max="80" step="1" value="10" />
+        <span class="val" id="show-a">10°</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="btn-reset">Reset</button>
+    </div>
+    
+    <div id="signature">Created by <span>Arpit Agarwal</span></div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────
+    const S = { h: 2.5, ang: 10 };
+
+    // ── Cached DOM Elements ───────────────────────────────────────────────
+    const elInc = document.getElementById('val-inc');
+    const elRef = document.getElementById('val-ref');
+    const elH = document.getElementById('val-h');
+    const elShowH = document.getElementById('show-h');
+    const elShowA = document.getElementById('show-a');
+    const elControls = document.getElementById('controls');
+    const elTopPanels = document.getElementById('top-panels');
+
+    // ── Canvas ────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    let globalScale = 1;
+    let globalBotMargin = 0;
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function updateUI() {
+      elInc.textContent = `${S.ang}°`;
+      elRef.textContent = `${S.ang}°`;
+      elH.textContent = `${S.h.toFixed(1)} m`;
+      elShowH.textContent = `${S.h.toFixed(1)} m`;
+      elShowA.textContent = `${S.ang}°`;
+    }
+
+    function worldToScreen(wx, wy) {
+      return {
+        x: W / 2 + wx * globalScale,
+        y: H - globalBotMargin - wy * globalScale,
+      };
+    }
+
+    function lerpAngle(a, b, t) {
+      let d = b - a;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      return a + d * t;
+    }
+
+    function arcBetween(cx, x, y, r, a1, a2, color) {
+      let d = a2 - a1;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      cx.save();
+      cx.strokeStyle = color;
+      cx.lineWidth = 2;
+      cx.globalAlpha = 0.8;
+      cx.beginPath();
+      cx.arc(x, y, r, a1, a2, d < 0);
+      cx.stroke();
+      cx.restore();
+    }
+
+    function drawTextWithBg(cx, text, x, y, color, fs, fontW = '600', align='center', base='middle') {
+      cx.save();
+      cx.font = `${fontW} ${fs}px "Outfit",sans-serif`;
+      cx.textAlign = align;
+      cx.textBaseline = base;
+      
+      cx.lineJoin = 'round';
+      cx.lineWidth = 6;
+      cx.strokeStyle = '#06060f'; 
+      cx.strokeText(text, x, y);
+      
+      cx.fillStyle = color;
+      cx.shadowBlur = 4; cx.shadowColor = 'rgba(0,0,0,0.5)';
+      cx.fillText(text, x, y);
+      cx.restore();
+    }
+
+    // UPDATED: Completely fixes overlapping subscript text bugs
+    function drawThetaLabel(cx, sub, x, y, fs) {
+      cx.save();
+      const th = '\u03b8'; // Theta symbol
+      
+      cx.font = `bold ${fs}px "Outfit",sans-serif`;
+      cx.textBaseline = 'middle';
+      cx.textAlign = 'center';
+      
+      // Measure theta so we know exactly where to attach the subscript
+      const tw = cx.measureText(th).width;
+
+      // 1. Draw Theta (Centered)
+      cx.lineJoin = 'round'; cx.lineWidth = 6; cx.strokeStyle = '#06060f';
+      cx.strokeText(th, x, y);
+      cx.fillStyle = '#e2e8f0'; 
+      cx.shadowBlur = 4; cx.shadowColor = 'rgba(0,0,0,0.5)';
+      cx.fillText(th, x, y);
+
+      // 2. Draw Subscript (Strictly LEFT-aligned, starting from Theta's right edge)
+      cx.textAlign = 'left';
+      cx.font = `bold ${fs * 0.7}px "Outfit",sans-serif`;
+      
+      // Calculate perfect offset: half the width of theta, plus a tiny gap
+      const subX = x + (tw / 2) - (fs * 0.05); 
+      const subY = y + fs * 0.15; // Push slightly down for true subscript look
+
+      // Punch out background for subscript
+      cx.strokeText(sub, subX, subY);
+      // Fill subscript text
+      cx.fillStyle = '#a5b4fc'; 
+      cx.fillText(sub, subX, subY);
+      
+      cx.restore();
+    }
+
+    function drawAngledText(ctx, text, p1, p2, offsetAmount, fs, color) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      let angle = Math.atan2(dy, dx);
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+
+      ctx.save();
+      ctx.translate(midX, midY);
+      if (angle > Math.PI/2 || angle < -Math.PI/2) {
+        angle += Math.PI;
+        offsetAmount = -offsetAmount; 
+      }
+      ctx.rotate(angle);
+      
+      ctx.font = `600 ${fs}px "Outfit",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#06060f';
+      ctx.strokeText(text, 0, -offsetAmount);
+      
+      ctx.fillStyle = color;
+      ctx.fillText(text, 0, -offsetAmount); 
+      ctx.restore();
+    }
+
+    // ── Draw Loop ────────────────────────────────────────────────────────
+    function frame(time) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#06060f';
+      ctx.fillRect(0, 0, W, H);
+
+      const { h, ang } = S;
+      const a = ang * Math.PI / 180;
+
+      // ── Physics ────────────────────────────────────────────────────────
+      const d = h * Math.tan(a);
+      const sx = -d, sy = h;       
+      const hx = 0, hy = 0;        
+      const rx = d,  ry = h;       
+      
+      // ── Dynamic Boundaries ─────────────────────────────────────────────
+      const controlsRect = elControls.getBoundingClientRect();
+      const topPanelsRect = elTopPanels.getBoundingClientRect();
+      
+      const maxWorldX = Math.max(2.5, Math.abs(d) + 1.2);
+      const maxWorldY = Math.max(2.0, h + 1.2); 
+
+      const margin = Math.min(W * 0.08, 40);
+      const topMargin = topPanelsRect.bottom + 20; 
+      globalBotMargin = (window.innerHeight - controlsRect.top) + 40;  
+      
+      const availW = W - margin * 2;
+      const availH = H - topMargin - globalBotMargin;
+      
+      globalScale = Math.min(availW / (maxWorldX * 2), availH / maxWorldY);
+
+      const pS  = worldToScreen(sx, sy);
+      const pH  = worldToScreen(hx, hy);
+      const pR  = worldToScreen(rx, ry);
+      const pML = worldToScreen(-maxWorldX, 0);
+      const pMR = worldToScreen(maxWorldX, 0);
+      const pNB = worldToScreen(hx, -0.5);
+      const pNT = worldToScreen(hx, maxWorldY - 0.5);
+
+      const arcR = Math.max(30, Math.min(65, globalScale * 0.9));
+
+      // ── Background grid ────────────────────────────────────────────────
+      ctx.save();
+      ctx.strokeStyle = 'rgba(99,102,241,0.06)';
+      ctx.lineWidth = 0.5;
+      const gridBoundX = Math.ceil(maxWorldX);
+      for (let x = -gridBoundX; x <= gridBoundX; x++) {
+        const a0 = worldToScreen(x, -0.5), a1 = worldToScreen(x, maxWorldY);
+        ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke();
+      }
+      const gridBoundY = Math.ceil(maxWorldY);
+      for (let y = 0; y <= gridBoundY; y++) {
+        const a0 = worldToScreen(-gridBoundX, y), a1 = worldToScreen(gridBoundX, y);
+        ctx.beginPath(); ctx.moveTo(a0.x, a0.y); ctx.lineTo(a1.x, a1.y); ctx.stroke();
+      }
+      ctx.restore();
+
+      // ── MIRROR VISUALS ─────────────────────────────────────────────────
+      ctx.save();
+      ctx.strokeStyle = 'rgba(167, 139, 250, 0.4)'; 
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      const hatchSpacing = 16;
+      const hatchLength = 10;
+      ctx.beginPath();
+      for (let x = pML.x; x <= pMR.x; x += hatchSpacing) {
+        ctx.moveTo(x, pML.y);
+        ctx.lineTo(x - hatchLength, pML.y + hatchLength);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.shadowBlur = 24; ctx.shadowColor = '#a78bfa';
+      ctx.strokeStyle = '#c4b5fd'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(pML.x, pML.y); ctx.lineTo(pMR.x, pMR.y); ctx.stroke();
+      
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pML.x, pML.y); ctx.lineTo(pMR.x, pMR.y); ctx.stroke();
+      ctx.restore();
+
+      const mirrorFs = Math.max(12, Math.min(14, globalScale * 0.25));
+      drawTextWithBg(ctx, 'MIRROR SURFACE', pH.x, pH.y + 24, '#a5b4fc', mirrorFs, '600', 'center', 'top');
+
+      // ── Normal line ────────────────────────────────────────────────────
+      ctx.save();
+      ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 2;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.moveTo(pNB.x, pNB.y); ctx.lineTo(pNT.x, pNT.y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      
+      ctx.save();
+      ctx.fillStyle = '#fb923c';
+      const as = 9;
+      ctx.beginPath();
+      ctx.moveTo(pNT.x, pNT.y);
+      ctx.lineTo(pNT.x - as, pNT.y - as * 1.8);
+      ctx.lineTo(pNT.x + as, pNT.y - as * 1.8);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      
+      const nLP = worldToScreen(hx + 0.3, maxWorldY * 0.85);
+      const fs = Math.max(11, Math.min(13, globalScale * 0.22));
+      drawTextWithBg(ctx, 'Normal', nLP.x, nLP.y, '#fb923c', fs, '600', 'left');
+
+      // ── Angle arcs & Labels ────────────────────────────────────────────
+      const normA = Math.atan2(pNT.y - pNB.y, pNT.x - pNB.x);
+      const incA  = Math.atan2(pS.y - pH.y, pS.x - pH.x);
+      const reflA = Math.atan2(pR.y - pH.y, pR.x - pH.x);
+
+      arcBetween(ctx, pH.x, pH.y, arcR, incA, normA, '#475569');
+      arcBetween(ctx, pH.x, pH.y, arcR, normA, reflA, '#475569');
+
+      const labelFs = Math.max(14, Math.min(20, globalScale * 0.33));
+      
+      let thetaOffset = arcR + 24;
+      if (S.ang <= 25) thetaOffset += 35; // Massively increased radial offset for tight angles
+
+      const midI = lerpAngle(incA, normA, 0.5);
+      drawThetaLabel(ctx, 'i', pH.x + thetaOffset * Math.cos(midI), pH.y + thetaOffset * Math.sin(midI), labelFs);
+
+      const midR = lerpAngle(normA, reflA, 0.5);
+      drawThetaLabel(ctx, 'r', pH.x + thetaOffset * Math.cos(midR), pH.y + thetaOffset * Math.sin(midR), labelFs);
+
+      // ── Distance line (source height) ──────────────────────────────────
+      const dBot = worldToScreen(sx, 0);
+      const dTop = worldToScreen(sx, sy);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(100,116,139,0.5)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.moveTo(dTop.x, dTop.y); ctx.lineTo(dBot.x, dBot.y); ctx.stroke();
+      ctx.setLineDash([]);
+      const tk = 7;
+      ctx.strokeStyle = 'rgba(100,116,139,0.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dBot.x - tk, dBot.y); ctx.lineTo(dBot.x + tk, dBot.y);
+      ctx.moveTo(dTop.x - tk, dTop.y); ctx.lineTo(dTop.x + tk, dTop.y);
+      ctx.stroke();
+      ctx.restore();
+      
+      const dLP = worldToScreen(sx, sy / 2);
+      const hfs = Math.max(11, Math.min(13, globalScale * 0.22));
+      drawTextWithBg(ctx, `${h.toFixed(1)} m`, dLP.x - 16, dLP.y, 'rgba(167,139,250,0.85)', hfs, '500', 'right');
+
+      // ── Continuous Flowing Ray Path ────────────────────────────────────
+      const flowSpeed = time * 0.05;
+
+      ctx.save();
+      ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.25; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(pS.x, pS.y); ctx.lineTo(pH.x, pH.y); ctx.lineTo(pR.x, pR.y); ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = '#dbeafe';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 12; 
+      ctx.shadowColor = '#60a5fa';
+      ctx.setLineDash([15, 20]);
+      ctx.lineDashOffset = -flowSpeed;
+      ctx.beginPath();
+      ctx.moveTo(pS.x, pS.y);
+      ctx.lineTo(pH.x, pH.y);
+      ctx.lineTo(pR.x, pR.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // ── Hit point ──────────────────────────────────────────────────────
+      ctx.save();
+      ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 14; ctx.shadowColor = '#ffffff';
+      ctx.beginPath(); ctx.arc(pH.x, pH.y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // ── Dynamic Element labels ─────────────────────────────────────────
+      const sfs = Math.max(11, Math.min(13, globalScale * 0.22));
+      
+      drawTextWithBg(ctx, 'SOURCE', pS.x - 25, pS.y - 18, '#60a5fa', sfs, '700', 'right');
+
+      ctx.save();
+      ctx.fillStyle = '#60a5fa'; ctx.shadowBlur = 22; ctx.shadowColor = '#60a5fa';
+      ctx.beginPath(); ctx.arc(pS.x, pS.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.fillStyle = '#bfdbfe';
+      ctx.beginPath(); ctx.arc(pS.x, pS.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+
+      // Hide Ray text entirely if angle is super tight to prevent clutter
+      const rayLenScreen = Math.hypot(pS.x - pH.x, pS.y - pH.y);
+      if (S.ang >= 25 && rayLenScreen > 90) {
+        drawAngledText(ctx, 'Incident Ray', pS, pH, 15, sfs, '#93c5fd');
+        drawAngledText(ctx, 'Reflected Ray', pH, pR, 15, sfs, '#93c5fd');
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    // ── Controls ───────────────────────────────────────────────────────
+    const sliderH = document.getElementById('slider-h');
+    const sliderA = document.getElementById('slider-a');
+
+    sliderH.addEventListener('input', () => {
+      S.h = parseFloat(sliderH.value);
+      updateUI();
+    });
+    sliderA.addEventListener('input', () => {
+      S.ang = parseInt(sliderA.value);
+      updateUI();
+    });
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      S.h = 2.5; S.ang = 30;
+      sliderH.value = 2.5; sliderA.value = 30;
+      updateUI();
+    });
+
+    // ── Start ──────────────────────────────────────────────────────────
+    updateUI();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
